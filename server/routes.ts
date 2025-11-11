@@ -214,6 +214,7 @@ export function setupRoutes(app: Express): void {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
         }
         const slug = req.params.slug;
+        const normalized = slug.toLowerCase();
         const rows = await sql`
           SELECT
             id,
@@ -240,6 +241,7 @@ export function setupRoutes(app: Express): void {
             last_updated AS "lastUpdated"
           FROM tools
           WHERE slug = ${slug}
+             OR LOWER(slug) = ${normalized}
           LIMIT 1;
         `;
 
