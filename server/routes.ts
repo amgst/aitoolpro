@@ -213,7 +213,7 @@ export function setupRoutes(app: Express): void {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
         }
-        const slug = req.params.slug;
+        const slug = req.params.slug.trim();
         const normalized = slug.toLowerCase();
         const sanitized = normalized.replace(/[^a-z0-9]+/g, "");
         let rows = await sql`
@@ -241,7 +241,8 @@ export function setupRoutes(app: Express): void {
             launch_date AS "launchDate",
             last_updated AS "lastUpdated"
           FROM tools
-          WHERE slug = ${slug}
+          WHERE LOWER(TRIM(slug)) = ${normalized}
+             OR slug = ${slug}
              OR LOWER(slug) = ${normalized}
              OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
              OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
@@ -279,6 +280,7 @@ export function setupRoutes(app: Express): void {
             WHERE REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
                OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
                OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
+               OR LOWER(TRIM(slug)) = ${normalized}
             LIMIT 1;
           `;
         }
