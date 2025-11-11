@@ -215,7 +215,7 @@ export function setupRoutes(app: Express): void {
         }
         const slug = req.params.slug;
         const normalized = slug.toLowerCase();
-        const rows = await sql`
+        let rows = await sql`
           SELECT
             id,
             slug,
@@ -244,6 +244,41 @@ export function setupRoutes(app: Express): void {
              OR LOWER(slug) = ${normalized}
           LIMIT 1;
         `;
+
+        // Fallback: try matching by name derived from slug (e.g., "ai-dreamer" -> "ai dreamer")
+        if (rows.length === 0) {
+          const nameGuess = slug.replace(/[-_]+/g, " ").trim();
+          const pattern = "%" + nameGuess + "%";
+          rows = await sql`
+            SELECT
+              id,
+              slug,
+              name,
+              description,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              tags,
+              badge,
+              rating,
+              source_detail_url AS "sourceDetailUrl",
+              developer,
+              documentation_url AS "documentationUrl",
+              social_links AS "socialLinks",
+              use_cases AS "useCases",
+              screenshots,
+              pricing_details AS "pricingDetails",
+              launch_date AS "launchDate",
+              last_updated AS "lastUpdated"
+            FROM tools
+            WHERE name ILIKE ${pattern}
+            ORDER BY similarity(name, ${nameGuess}) DESC NULLS LAST
+            LIMIT 1;
+          `;
+        }
 
         if (rows.length === 0) {
           return res.status(404).json({ error: "Tool not found" });
