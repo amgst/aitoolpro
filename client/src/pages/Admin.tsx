@@ -9,10 +9,12 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Tool } from "@shared/schema";
 import { useState } from "react";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 type PagedTools = { items: Tool[]; total: number };
 
 export default function Admin() {
+  const { authenticated, isChecking } = useAdminSession();
   const { toast } = useToast();
   const style = {
     "--sidebar-width": "16rem",
@@ -37,6 +39,7 @@ export default function Admin() {
       return { items, total: totalHeader ? parseInt(totalHeader, 10) : items.length };
     },
     keepPreviousData: true,
+    enabled: authenticated,
   });
 
   const tools = data?.items ?? [];
@@ -68,6 +71,18 @@ export default function Admin() {
       deleteMutation.mutate(id);
     }
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Checking admin access…</p>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>

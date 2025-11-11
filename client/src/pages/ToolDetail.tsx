@@ -3,11 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import ToolDetailView from "@/components/ToolDetailView";
 import type { Tool } from "@shared/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ToolDetail() {
   const [, params] = useRoute("/tool/:slug");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [params?.slug]);
   
   const { data: tool, isLoading } = useQuery<Tool>({
     queryKey: ['/api/tools', params?.slug],

@@ -1,11 +1,18 @@
 // File: server/routes.ts
 // Description: Express routes (Neon-only version, no JSON fallback)
 
-import type { Express } from "express";
+import type { Express, NextFunction, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { insertToolSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { neon } from "@neondatabase/serverless";
+import {
+  clearAdminSession,
+  isAdminAuthenticated,
+  redirectIfUnauthenticated,
+  requireAdminApi,
+  setAdminSession,
+} from "./auth.js";
 
 // ✅ Initialize Neon connection once
 const databaseUrl = process.env.DATABASE_URL;
@@ -14,6 +21,18 @@ const sql: any = databaseUrl ? neon(databaseUrl) : null;
 
 export function setupRoutes(app: Express): void {
   const bases = ["/api", ""]; // support both /api/* and /* when hosted behind a function path
+
+  // Intercept admin pages and require authentication
+  app.get(
+    "/admin",
+    redirectIfUnauthenticated,
+    (_req: Request, _res: Response, next: NextFunction) => next(),
+  );
+  app.get(
+    "/admin/*",
+    redirectIfUnauthenticated,
+    (_req: Request, _res: Response, next: NextFunction) => next(),
+  );
 
   // Health check
   for (const base of bases)
@@ -299,7 +318,7 @@ export function setupRoutes(app: Express): void {
 
   // Create new tool
   for (const base of bases)
-    app.post(`${base}/tools`, async (req, res) => {
+    app.post(`${base}/tools`, requireAdminApi, async (req, res) => {
       try {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
@@ -336,7 +355,7 @@ export function setupRoutes(app: Express): void {
 
   // Update tool by ID
   for (const base of bases)
-    app.patch(`${base}/tools/:id`, async (req, res) => {
+    app.patch(`${base}/tools/:id`, requireAdminApi, async (req, res) => {
       try {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
@@ -372,7 +391,7 @@ export function setupRoutes(app: Express): void {
 
   // Delete tool by ID
   for (const base of bases)
-    app.delete(`${base}/tools/:id`, async (req, res) => {
+    app.delete(`${base}/tools/:id`, requireAdminApi, async (req, res) => {
       try {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
@@ -393,7 +412,7 @@ export function setupRoutes(app: Express): void {
 
   // CSV import
   for (const base of bases)
-    app.post(`${base}/tools/import-csv`, async (req, res) => {
+    app.post(`${base}/tools/import-csv`, requireAdminApi, async (req, res) => {
       try {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
@@ -451,6 +470,45 @@ export function setupRoutes(app: Express): void {
       } catch (err: any) {
         res.status(500).json({ error: err.message });
       }
+    });
+  for (const base of bases)
+    app.post(`${base}/admin/login`, (req, res) => {
+      const password = (req.body?.password ?? "") as string;
+      if (!process.env.ADMIN_PASSWORD) {
+        return res
+          .status(500)
+          .json({ error: "Admin password is not configured" });
+      }
+
+      if (!password) {
+        return res.status(400).json({ error: "Password is required" });
+      }
+
+      if (password !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+
+      setAdminSession(res);
+      return res.json({ authenticated: true });
+    });
+
+  for (const base of bases)
+    app.post(`${base}/admin/logout`, (req, res) => {
+      clearAdminSession(req, res);
+      res.json({ success: true });
+    });
+
+  for (const base of bases)
+    app.get(`${base}/admin/session`, (req, res) => {
+      if (!process.env.ADMIN_PASSWORD) {
+        return res.status(200).json({ authenticated: true });
+      }
+
+      if (isAdminAuthenticated(req)) {
+        return res.json({ authenticated: true });
+      }
+
+      res.status(401).json({ authenticated: false });
     });
 }
 

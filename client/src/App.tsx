@@ -8,6 +8,8 @@ import ToolDetail from "@/pages/ToolDetail";
 import Admin from "@/pages/Admin";
 import AdminNew from "@/pages/AdminNew";
 import AdminImport from "@/pages/AdminImport";
+import AdminSettings from "@/pages/AdminSettings";
+import AdminLogin from "@/pages/AdminLogin";
 import NotFound from "@/pages/not-found";
 import Categories from "@/pages/Categories";
 import Footer from "@/components/Footer";
@@ -18,9 +20,11 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/tool/:slug" component={ToolDetail} />
       <Route path="/categories" component={Categories} />
+      <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/new" component={AdminNew} />
       <Route path="/admin/import" component={AdminImport} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -6,8 +6,10 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import type { InsertTool } from "@shared/schema";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 export default function AdminNew() {
+  const { authenticated, isChecking } = useAdminSession();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const style = {
@@ -39,6 +41,18 @@ export default function AdminNew() {
   const handleSubmit = (data: InsertTool) => {
     createMutation.mutate(data);
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Checking admin access…</p>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>

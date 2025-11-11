@@ -6,8 +6,10 @@ import { Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 export default function AdminImport() {
+  const { authenticated, isChecking } = useAdminSession();
   const { toast } = useToast();
   const style = {
     "--sidebar-width": "16rem",
@@ -49,6 +51,18 @@ export default function AdminImport() {
   const handleDownloadTemplate = () => {
     window.open('/api/tools/csv-template', '_blank');
   };
+
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Checking admin access…</p>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>

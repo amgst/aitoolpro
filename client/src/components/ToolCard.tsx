@@ -10,6 +10,13 @@ interface ToolCardProps {
 }
 
 export default function ToolCard({ tool }: ToolCardProps) {
+  const websiteUrl = tool.websiteUrl ?? (tool as { url?: string }).url;
+
+  const handleVisitWebsite = () => {
+    if (!websiteUrl) return;
+    window.open(websiteUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <Card className="flex h-full flex-col hover-elevate transition-shadow">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-4">
@@ -88,7 +95,8 @@ export default function ToolCard({ tool }: ToolCardProps) {
         <Button
           variant="default"
           size="icon"
-          onClick={() => window.open(tool.websiteUrl, '_blank')}
+          onClick={handleVisitWebsite}
+          disabled={!websiteUrl}
           data-testid={`button-visit-${tool.slug}`}
         >
           <ExternalLink className="h-4 w-4" />

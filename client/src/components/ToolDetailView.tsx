@@ -10,6 +10,13 @@ interface ToolDetailViewProps {
 }
 
 export default function ToolDetailView({ tool }: ToolDetailViewProps) {
+  const websiteUrl = tool.websiteUrl ?? (tool as { url?: string }).url;
+
+  const openInNewTab = (url?: string) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 lg:px-8">
       <Link href="/" data-testid="link-back">
@@ -161,7 +168,8 @@ export default function ToolDetailView({ tool }: ToolDetailViewProps) {
               <div className="space-y-2 pt-4">
                 <Button
                   className="w-full gap-2"
-                  onClick={() => window.open(tool.websiteUrl, '_blank')}
+                  onClick={() => openInNewTab(websiteUrl)}
+                  disabled={!websiteUrl}
                   data-testid="button-visit-website"
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -172,7 +180,7 @@ export default function ToolDetailView({ tool }: ToolDetailViewProps) {
                   <Button
                     variant="outline"
                     className="w-full gap-2"
-                    onClick={() => window.open(tool.documentationUrl, '_blank')}
+                    onClick={() => openInNewTab(tool.documentationUrl)}
                     data-testid="button-documentation"
                   >
                     Documentation
@@ -188,7 +196,7 @@ export default function ToolDetailView({ tool }: ToolDetailViewProps) {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={() => window.open(tool.socialLinks!.twitter, '_blank')}
+                        onClick={() => openInNewTab(tool.socialLinks!.twitter)}
                         data-testid="button-twitter"
                       >
                         <Twitter className="h-4 w-4" />
@@ -198,7 +206,7 @@ export default function ToolDetailView({ tool }: ToolDetailViewProps) {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={() => window.open(tool.socialLinks!.github, '_blank')}
+                        onClick={() => openInNewTab(tool.socialLinks!.github)}
                         data-testid="button-github"
                       >
                         <Github className="h-4 w-4" />
@@ -208,7 +216,7 @@ export default function ToolDetailView({ tool }: ToolDetailViewProps) {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={() => window.open(tool.socialLinks!.linkedin, '_blank')}
+                        onClick={() => openInNewTab(tool.socialLinks!.linkedin)}
                         data-testid="button-linkedin"
                       >
                         <Linkedin className="h-4 w-4" />
