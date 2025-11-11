@@ -5,6 +5,7 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import compression from "compression";
 import { setupRoutes } from "./routes";
 import { log } from "./logger";
 
@@ -16,6 +17,9 @@ declare module "http" {
 
 export function createApp(): Express {
   const app = express();
+
+  // enable gzip/deflate compression to keep responses under platform limits
+  app.use(compression());
 
   app.use(
     express.json({

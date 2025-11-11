@@ -48,17 +48,45 @@ export function setupRoutes(app: Express): void {
       try {
         const { search, category } = req.query;
 
-        let query = sql`SELECT * FROM tools`;
-
+        const conditions: any[] = [];
         if (search && typeof search === "string") {
-          query = sql`SELECT * FROM tools WHERE name ILIKE ${"%" + search + "%"}`;
+          const pattern = "%" + search + "%";
+          conditions.push(
+            sql`(name ILIKE ${pattern} OR description ILIKE ${pattern} OR "shortDescription" ILIKE ${pattern})`,
+          );
         }
-
-        let tools = await query;
-
         if (category && typeof category === "string") {
-          tools = tools.filter((t: any) => t.category === category);
+          conditions.push(sql`category = ${category}`);
         }
+
+        const whereClause =
+          conditions.length === 0
+            ? sql``
+            : conditions.reduce(
+                (acc, curr, idx) =>
+                  idx === 0 ? sql`WHERE ${curr}` : sql`${acc} AND ${curr}`,
+                sql``,
+              );
+
+        const tools =
+          await sql`
+            SELECT
+              id,
+              slug,
+              name,
+              "shortDescription",
+              category,
+              pricing,
+              "websiteUrl",
+              "logoUrl",
+              features,
+              badge,
+              rating,
+              developer
+            FROM tools
+            ${whereClause}
+            ORDER BY name ASC;
+          `;
 
         res.json(tools);
       } catch (err: any) {
