@@ -8,3 +8,4 @@ vite.config.ts.*
 *.log
 .replit
 replit.nix
+.vercel
