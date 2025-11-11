@@ -9,13 +9,8 @@ import { neon } from "@neondatabase/serverless";
 
 // ✅ Initialize Neon connection once
 const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  console.error("❌ DATABASE_URL is not set in environment variables!");
-  throw new Error("DATABASE_URL is required but missing.");
-}
-
-const sql = neon(databaseUrl);
+// Do not throw at module load on serverless. Defer error to handlers for clearer responses.
+const sql: any = databaseUrl ? neon(databaseUrl) : null;
 
 export function setupRoutes(app: Express): void {
   const bases = ["/api", ""]; // support both /api/* and /* when hosted behind a function path
@@ -24,6 +19,11 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.get(`${base}/health`, async (req, res) => {
       try {
+        if (!sql) {
+          return res
+            .status(500)
+            .json({ status: "error", message: "DATABASE_URL is missing" });
+        }
         const [{ count }] =
           await sql<{ count: string }[]>`SELECT COUNT(*)::text AS count FROM tools;`;
 
@@ -46,6 +46,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.get(`${base}/tools`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const { search, category } = req.query;
 
         const conditions: any[] = [];
@@ -99,6 +102,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.get(`${base}/tools/:slug`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const slug = req.params.slug;
         const rows =
           await sql`SELECT * FROM tools WHERE slug = ${slug} LIMIT 1;`;
@@ -117,6 +123,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.post(`${base}/tools`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const validated = insertToolSchema.parse(req.body);
 
         const inserted =
@@ -151,6 +160,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.patch(`${base}/tools/:id`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const partial = insertToolSchema.partial().parse(req.body);
         const id = req.params.id;
 
@@ -184,6 +196,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.delete(`${base}/tools/:id`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const id = req.params.id;
         const deleted =
           await sql`DELETE FROM tools WHERE id = ${id} RETURNING *;`;
@@ -202,6 +217,9 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.post(`${base}/tools/import-csv`, async (req, res) => {
       try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
         const { csvData } = req.body;
         if (!csvData || typeof csvData !== "string") {
           return res.status(400).json({ error: "No CSV data provided" });
