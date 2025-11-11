@@ -15,6 +15,11 @@ export default async function handler(
   }
 
   const { id } = req.query;
+  const identifier = Array.isArray(id) ? id[0] : id;
+
+  if (!identifier) {
+    return res.status(400).json({ error: 'Tool identifier is required' });
+  }
 
   if (!process.env.DATABASE_URL) {
     return res.status(500).json({ error: 'Database not configured' });
@@ -24,7 +29,12 @@ export default async function handler(
 
   try {
     if (req.method === 'GET') {
-      const [tool] = await sql`SELECT * FROM tools WHERE id = ${id as string}`;
+      const [tool] = await sql`
+        SELECT *
+        FROM tools
+        WHERE id = ${identifier} OR slug = ${identifier}
+        LIMIT 1
+      `;
       
       if (!tool) {
         return res.status(404).json({ error: 'Tool not found' });
@@ -34,7 +44,20 @@ export default async function handler(
     }
 
     if (req.method === 'PUT' || req.method === 'PATCH') {
-      const { name, description, url, category, tags } = req.body;
+      const existingToolResult = await sql`
+        SELECT id
+        FROM tools
+        WHERE id = ${identifier} OR slug = ${identifier}
+        LIMIT 1
+      `;
+
+      const existingTool = existingToolResult[0];
+
+      if (!existingTool) {
+        return res.status(404).json({ error: 'Tool not found' });
+      }
+
+      const { name, description, url, category, tags, slug } = req.body;
       
       const [tool] = await sql`
         UPDATE tools
@@ -43,8 +66,9 @@ export default async function handler(
             url = ${url}, 
             category = ${category}, 
             tags = ${tags || []},
+            slug = COALESCE(${slug}, slug),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${id as string}
+        WHERE id = ${existingTool.id}
         RETURNING *
       `;
       
@@ -56,8 +80,21 @@ export default async function handler(
     }
 
     if (req.method === 'DELETE') {
+      const existingToolResult = await sql`
+        SELECT id
+        FROM tools
+        WHERE id = ${identifier} OR slug = ${identifier}
+        LIMIT 1
+      `;
+
+      const existingTool = existingToolResult[0];
+
+      if (!existingTool) {
+        return res.status(404).json({ error: 'Tool not found' });
+      }
+
       const [tool] = await sql`
-        DELETE FROM tools WHERE id = ${id as string}
+        DELETE FROM tools WHERE id = ${existingTool.id}
         RETURNING *
       `;
       
