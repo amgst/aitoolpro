@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
 type ToolRow = Record<string, any>;
+type CountRow = { count: number };
 
 function parseJsonArray(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[];
@@ -78,7 +79,185 @@ export default async function handler(
 
   try {
     if (req.method === 'GET') {
-      const tools = await sql`SELECT * FROM tools ORDER BY created_at DESC`;
+      const { search, category, page: pageParam, limit: limitParam } = req.query as {
+        search?: string;
+        category?: string;
+        page?: string;
+        limit?: string;
+      };
+
+      const page = Math.max(
+        1,
+        Number.isFinite(Number(pageParam)) ? parseInt(pageParam!, 10) : 1,
+      );
+      const limitRaw = Number.isFinite(Number(limitParam))
+        ? parseInt(limitParam!, 10)
+        : 24;
+      const limit = Math.max(1, Math.min(100, limitRaw));
+      const offset = (page - 1) * limit;
+
+      const hasSearch = typeof search === "string" && search.trim().length > 0;
+      const hasCategory = typeof category === "string" && category.trim().length > 0;
+
+      let tools: ToolRow[] = [];
+      let totalRows: CountRow[] = [];
+
+      if (!hasSearch && !hasCategory) {
+        totalRows = (await sql`SELECT COUNT(*)::int AS count FROM tools;`) as CountRow[];
+        tools = (await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description,
+            category,
+            pricing,
+            website_url,
+            logo_url,
+            features,
+            tags,
+            badge,
+            rating,
+            developer,
+            documentation_url,
+            social_links,
+            use_cases,
+            screenshots,
+            pricing_details,
+            launch_date,
+            last_updated,
+            created_at
+          FROM tools
+          ORDER BY name ASC
+          LIMIT ${limit} OFFSET ${offset};
+        `) as ToolRow[];
+      } else if (hasSearch && !hasCategory) {
+        const pattern = `%${search!.trim()}%`;
+        totalRows = (await sql`
+          SELECT COUNT(*)::int AS count
+          FROM tools
+          WHERE name ILIKE ${pattern}
+            OR description ILIKE ${pattern}
+            OR short_description ILIKE ${pattern};
+        `) as CountRow[];
+        tools = (await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description,
+            category,
+            pricing,
+            website_url,
+            logo_url,
+            features,
+            tags,
+            badge,
+            rating,
+            developer,
+            documentation_url,
+            social_links,
+            use_cases,
+            screenshots,
+            pricing_details,
+            launch_date,
+            last_updated,
+            created_at
+          FROM tools
+          WHERE name ILIKE ${pattern}
+            OR description ILIKE ${pattern}
+            OR short_description ILIKE ${pattern}
+          ORDER BY name ASC
+          LIMIT ${limit} OFFSET ${offset};
+        `) as ToolRow[];
+      } else if (!hasSearch && hasCategory) {
+        totalRows = (await sql`
+          SELECT COUNT(*)::int AS count
+          FROM tools
+          WHERE category = ${category};
+        `) as CountRow[];
+        tools = (await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description,
+            category,
+            pricing,
+            website_url,
+            logo_url,
+            features,
+            tags,
+            badge,
+            rating,
+            developer,
+            documentation_url,
+            social_links,
+            use_cases,
+            screenshots,
+            pricing_details,
+            launch_date,
+            last_updated,
+            created_at
+          FROM tools
+          WHERE category = ${category}
+          ORDER BY name ASC
+          LIMIT ${limit} OFFSET ${offset};
+        `) as ToolRow[];
+      } else {
+        const pattern = `%${search!.trim()}%`;
+        totalRows = (await sql`
+          SELECT COUNT(*)::int AS count
+          FROM tools
+          WHERE (name ILIKE ${pattern}
+             OR description ILIKE ${pattern}
+             OR short_description ILIKE ${pattern})
+            AND category = ${category};
+        `) as CountRow[];
+        tools = (await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description,
+            category,
+            pricing,
+            website_url,
+            logo_url,
+            features,
+            tags,
+            badge,
+            rating,
+            developer,
+            documentation_url,
+            social_links,
+            use_cases,
+            screenshots,
+            pricing_details,
+            launch_date,
+            last_updated,
+            created_at
+          FROM tools
+          WHERE (name ILIKE ${pattern}
+             OR description ILIKE ${pattern}
+             OR short_description ILIKE ${pattern})
+            AND category = ${category}
+          ORDER BY name ASC
+          LIMIT ${limit} OFFSET ${offset};
+        `) as ToolRow[];
+      }
+
+      const total =
+        Array.isArray(totalRows) && totalRows.length > 0
+          ? Number(totalRows[0].count)
+          : tools.length;
+
+      res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+      res.setHeader("X-Total-Count", String(total));
       return res.status(200).json(tools.map(mapRowToTool));
     }
 
