@@ -215,6 +215,7 @@ export function setupRoutes(app: Express): void {
         }
         const slug = req.params.slug;
         const normalized = slug.toLowerCase();
+        const sanitized = normalized.replace(/[^a-z0-9]+/g, "");
         let rows = await sql`
           SELECT
             id,
@@ -243,6 +244,8 @@ export function setupRoutes(app: Express): void {
           WHERE slug = ${slug}
              OR LOWER(slug) = ${normalized}
              OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
+             OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
+             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
           LIMIT 1;
         `;
 
@@ -274,6 +277,8 @@ export function setupRoutes(app: Express): void {
               last_updated AS "lastUpdated"
             FROM tools
             WHERE REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
+               OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
+               OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
             LIMIT 1;
           `;
         }
