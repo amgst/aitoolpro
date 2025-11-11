@@ -60,26 +60,59 @@ export function setupRoutes(app: Express): void {
         let tools;
         if (!hasSearch && !hasCategory) {
           tools = await sql`
-            SELECT id, slug, name, "shortDescription", category, pricing,
-                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            SELECT
+              id,
+              slug,
+              name,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              badge,
+              rating,
+              developer
             FROM tools
             ORDER BY name ASC;
           `;
         } else if (hasSearch && !hasCategory) {
           const pattern = "%" + search!.trim() + "%";
           tools = await sql`
-            SELECT id, slug, name, "shortDescription", category, pricing,
-                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            SELECT
+              id,
+              slug,
+              name,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              badge,
+              rating,
+              developer
             FROM tools
             WHERE (name ILIKE ${pattern}
               OR description ILIKE ${pattern}
-              OR "shortDescription" ILIKE ${pattern})
+              OR short_description ILIKE ${pattern})
             ORDER BY name ASC;
           `;
         } else if (!hasSearch && hasCategory) {
           tools = await sql`
-            SELECT id, slug, name, "shortDescription", category, pricing,
-                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            SELECT
+              id,
+              slug,
+              name,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              badge,
+              rating,
+              developer
             FROM tools
             WHERE category = ${category}
             ORDER BY name ASC;
@@ -87,12 +120,23 @@ export function setupRoutes(app: Express): void {
         } else {
           const pattern = "%" + search!.trim() + "%";
           tools = await sql`
-            SELECT id, slug, name, "shortDescription", category, pricing,
-                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            SELECT
+              id,
+              slug,
+              name,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              badge,
+              rating,
+              developer
             FROM tools
             WHERE (name ILIKE ${pattern}
               OR description ILIKE ${pattern}
-              OR "shortDescription" ILIKE ${pattern})
+              OR short_description ILIKE ${pattern})
               AND category = ${category}
             ORDER BY name ASC;
           `;
@@ -113,8 +157,34 @@ export function setupRoutes(app: Express): void {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
         }
         const slug = req.params.slug;
-        const rows =
-          await sql`SELECT * FROM tools WHERE slug = ${slug} LIMIT 1;`;
+        const rows = await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description AS "shortDescription",
+            category,
+            pricing,
+            website_url AS "websiteUrl",
+            logo_url AS "logoUrl",
+            features,
+            tags,
+            badge,
+            rating,
+            source_detail_url AS "sourceDetailUrl",
+            developer,
+            documentation_url AS "documentationUrl",
+            social_links AS "socialLinks",
+            use_cases AS "useCases",
+            screenshots,
+            pricing_details AS "pricingDetails",
+            launch_date AS "launchDate",
+            last_updated AS "lastUpdated"
+          FROM tools
+          WHERE slug = ${slug}
+          LIMIT 1;
+        `;
 
         if (rows.length === 0) {
           return res.status(404).json({ error: "Tool not found" });
