@@ -1,63 +1,45 @@
-import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
-
-const COOKIE_NAME = "admin_session";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
-const SESSION_SECRET =
-  process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || "secret";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin";
-
-const activeSessions = new Set<string>();
-
-function hashToken(token: string): string {
-  return crypto.createHmac("sha256", SESSION_SECRET).update(token).digest("hex");
-}
-
-function parseCookies(req: Request): Record<string, string> {
-  const header = req.headers.cookie;
-  if (!header) return {};
-  return header.split(";").reduce((acc, cookie) => {
-    const [name, ...rest] = cookie.split("=");
-    if (!name) return acc;
-    acc[name.trim()] = decodeURIComponent(rest.join("=").trim());
-    return acc;
-  }, {} as Record<string, string>);
-}
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_TTL_MS,
+  createSessionToken,
+  getAdminPassword,
+  parseCookies,
+  verifySessionToken,
+} from "../shared/adminAuth.js";
 
 function getSessionToken(req: Request): string | undefined {
-  const cookies = parseCookies(req);
-  return cookies[COOKIE_NAME];
+  const cookies = parseCookies(req.headers.cookie);
+  return cookies[ADMIN_COOKIE_NAME];
 }
 
 export function isAdminConfigured(): boolean {
-  return true;
+  return Boolean(getAdminPassword());
 }
 
 export function isAdminAuthenticated(req: Request): boolean {
   const token = getSessionToken(req);
-  if (!token) return false;
-  return activeSessions.has(hashToken(token));
+  return verifySessionToken(token);
 }
 
 export function setAdminSession(res: Response): void {
-  const token = crypto.randomBytes(32).toString("hex");
-  activeSessions.add(hashToken(token));
-
-  res.cookie(COOKIE_NAME, token, {
+  const token = createSessionToken();
+  res.cookie(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    maxAge: SESSION_TTL_MS,
+    maxAge: Math.floor(ADMIN_SESSION_TTL_MS / 1000),
     path: "/",
   });
 }
 
-export function clearAdminSession(req: Request, res: Response): void {
-  const token = getSessionToken(req);
-  if (token) {
-    activeSessions.delete(hashToken(token));
-  }
-  res.clearCookie(COOKIE_NAME, { path: "/" });
+export function clearAdminSession(_req: Request, res: Response): void {
+  res.cookie(ADMIN_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
 }
 
 export function requireAdminApi(
