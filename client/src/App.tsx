@@ -10,6 +10,7 @@ import AdminNew from "@/pages/AdminNew";
 import AdminImport from "@/pages/AdminImport";
 import AdminSettings from "@/pages/AdminSettings";
 import AdminLogin from "@/pages/AdminLogin";
+import AdminEdit from "@/pages/AdminEdit";
 import NotFound from "@/pages/not-found";
 import Categories from "@/pages/Categories";
 import Footer from "@/components/Footer";
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/admin/new" component={AdminNew} />
       <Route path="/admin/import" component={AdminImport} />
+      <Route path="/admin/edit/:id" component={AdminEdit} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route component={NotFound} />
     </Switch>

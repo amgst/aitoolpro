@@ -10,11 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 import type { Tool } from "@shared/schema";
 import { useState } from "react";
 import { useAdminSession } from "@/hooks/useAdminSession";
+import { useLocation } from "wouter";
+import { useAdminSession } from "@/hooks/useAdminSession";
 
 type PagedTools = { items: Tool[]; total: number };
 
 export default function Admin() {
   const { authenticated, isChecking } = useAdminSession();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const style = {
     "--sidebar-width": "16rem",
@@ -138,7 +141,7 @@ export default function Admin() {
                           <Button
                             size="icon"
                             variant="outline"
-                            onClick={() => console.log('Edit', tool.id)}
+                            onClick={() => setLocation(`/admin/edit/${tool.id}`)}
                             data-testid={`button-edit-${tool.slug}`}
                           >
                             <Edit className="h-4 w-4" />
