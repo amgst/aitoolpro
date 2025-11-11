@@ -3,15 +3,15 @@ import AdminSidebar from "@/components/AdminSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Edit, Search, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Tool } from "@shared/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdminSession } from "@/hooks/useAdminSession";
 import { useLocation } from "wouter";
-import { useAdminSession } from "@/hooks/useAdminSession";
 
 type PagedTools = { items: Tool[]; total: number };
 
@@ -24,14 +24,27 @@ export default function Admin() {
   };
 
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const pageSize = 20;
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
   const { data, isLoading } = useQuery<PagedTools>({
-    queryKey: ['admin-tools', page, pageSize],
+    queryKey: ['admin-tools', page, pageSize, debouncedSearchTerm],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", String(pageSize));
+      if (debouncedSearchTerm) {
+        params.set("search", debouncedSearchTerm);
+      }
       const res = await fetch(`/api/tools?${params.toString()}`, { credentials: "include" });
       if (!res.ok) {
         const text = (await res.text()) || res.statusText;
@@ -101,8 +114,21 @@ export default function Admin() {
           
           <main className="flex-1 overflow-auto p-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>All Tools {total ? `(${total})` : ""}</CardTitle>
+                <div className="relative w-full max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => {
+                      setPage(1);
+                      setSearchTerm(event.target.value);
+                    }}
+                    placeholder="Search tools"
+                    className="pl-9"
+                    data-testid="input-admin-search"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
