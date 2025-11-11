@@ -3,7 +3,7 @@
 
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { insertToolSchema } from "@shared/schema";
+import { insertToolSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { neon } from "@neondatabase/serverless";
 

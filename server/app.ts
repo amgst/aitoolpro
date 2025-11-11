@@ -6,8 +6,8 @@ import express, {
   type Response,
 } from "express";
 import compression from "compression";
-import { setupRoutes } from "./routes";
-import { log } from "./logger";
+import { setupRoutes } from "./routes.js";
+import { log } from "./logger.js";
 
 declare module "http" {
   interface IncomingMessage {
