@@ -3,16 +3,13 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/[...path].ts": {
-      "includeFiles": "data/**"
-    }
+    "api/[...path].ts": {}
   },
   "rewrites": [
     { "source": "/health", "destination": "/api/health" },
     { "source": "/tools", "destination": "/api/tools" },
     { "source": "/tools/(.*)", "destination": "/api/tools/$1" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
 
