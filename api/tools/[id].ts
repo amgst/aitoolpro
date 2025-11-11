@@ -5,6 +5,15 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   const { id } = req.query;
 
   if (!process.env.DATABASE_URL) {
@@ -34,7 +43,7 @@ export default async function handler(
             url = ${url}, 
             category = ${category}, 
             tags = ${tags || []},
-            updated_at = NOW()
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id as string}
         RETURNING *
       `;
@@ -56,12 +65,12 @@ export default async function handler(
         return res.status(404).json({ error: 'Tool not found' });
       }
       
-      return res.status(200).json({ message: 'Tool deleted' });
+      return res.status(200).json({ message: 'Tool deleted successfully' });
     }
 
-    res.status(405).json({ error: 'Method not allowed' });
-  } catch (error) {
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error: any) {
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }
