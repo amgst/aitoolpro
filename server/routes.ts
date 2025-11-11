@@ -242,13 +242,12 @@ export function setupRoutes(app: Express): void {
           FROM tools
           WHERE slug = ${slug}
              OR LOWER(slug) = ${normalized}
+             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
           LIMIT 1;
         `;
 
-        // Fallback: try matching by name derived from slug (e.g., "ai-dreamer" -> "ai dreamer")
+        // Fallback: try computed slug variant if not found yet
         if (rows.length === 0) {
-          const nameGuess = slug.replace(/[-_]+/g, " ").trim();
-          const pattern = "%" + nameGuess + "%";
           rows = await sql`
             SELECT
               id,
@@ -274,8 +273,7 @@ export function setupRoutes(app: Express): void {
               launch_date AS "launchDate",
               last_updated AS "lastUpdated"
             FROM tools
-            WHERE name ILIKE ${pattern}
-            ORDER BY similarity(name, ${nameGuess}) DESC NULLS LAST
+            WHERE REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
             LIMIT 1;
           `;
         }
