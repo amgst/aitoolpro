@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import CategoryFilters from "@/components/CategoryFilters";
 import ToolGrid from "@/components/ToolGrid";
+import Footer from "@/components/Footer";
 import type { Tool } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 
@@ -61,7 +62,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar searchQuery={searchQuery} onSearchChange={(v) => { setSearchQuery(v); setPage(1); }} />
       <Hero 
         searchQuery={searchQuery} 
@@ -73,7 +74,7 @@ export default function Home() {
         selectedCategory={selectedCategory}
         onCategorySelect={onSelectCategory}
       />
-      <main className="container mx-auto px-4 py-12 lg:px-8">
+      <main className="container mx-auto flex-1 px-4 py-12 lg:px-8">
         {isLoading ? (
           <div className="text-center">Loading...</div>
         ) : isError ? (
@@ -100,6 +101,7 @@ export default function Home() {
           </>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
