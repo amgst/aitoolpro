@@ -8,6 +8,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Tool } from "@shared/schema";
+import { useState } from "react";
+
+type PagedTools = { items: Tool[]; total: number };
 
 export default function Admin() {
   const { toast } = useToast();
@@ -15,16 +18,37 @@ export default function Admin() {
     "--sidebar-width": "16rem",
   };
 
-  const { data: tools = [], isLoading } = useQuery<Tool[]>({
-    queryKey: ['/api/tools'],
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const { data, isLoading } = useQuery<PagedTools>({
+    queryKey: ['admin-tools', page, pageSize],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(pageSize));
+      const res = await fetch(`/api/tools?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) {
+        const text = (await res.text()) || res.statusText;
+        throw new Error(text);
+      }
+      const totalHeader = res.headers.get("x-total-count");
+      const items = await res.json();
+      return { items, total: totalHeader ? parseInt(totalHeader, 10) : items.length };
+    },
+    keepPreviousData: true,
   });
+
+  const tools = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest('DELETE', `/api/tools/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tools'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-tools'] });
       toast({
         title: "Tool deleted",
         description: "The tool has been removed successfully.",
@@ -60,7 +84,7 @@ export default function Admin() {
           <main className="flex-1 overflow-auto p-6">
             <Card>
               <CardHeader>
-                <CardTitle>All Tools ({tools.length})</CardTitle>
+                <CardTitle>All Tools {total ? `(${total})` : ""}</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -116,6 +140,19 @@ export default function Admin() {
                         </div>
                       </div>
                     ))}
+                    <div className="flex items-center justify-between pt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Page {page} of {totalPages} {total ? `(Total ${total})` : ""}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                          Previous
+                        </Button>
+                        <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+                          Next
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>

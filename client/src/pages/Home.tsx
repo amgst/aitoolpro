@@ -1,19 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import CategoryFilters from "@/components/CategoryFilters";
 import ToolGrid from "@/components/ToolGrid";
 import type { Tool } from "@shared/schema";
-import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  const { data: tools = [], isLoading, isError, error } = useQuery<Tool[]>({
-    queryKey: ['/api/tools'],
-  });
+  const [page, setPage] = useState(1);
+  const pageSize = 24;
 
   // Initialize selected category from query param for deep links like /?category=Design
   useEffect(() => {
@@ -22,28 +20,49 @@ export default function Home() {
     if (cat) setSelectedCategory(cat);
   }, []);
 
-  const categories = useMemo(() => 
-    Array.from(new Set(tools.map(tool => tool.category))),
-    [tools]
+  type PagedTools = { items: Tool[]; total: number };
+  type CategoryRow = { category: string; count: number };
+
+  const { data: categoriesRows = [] } = useQuery<CategoryRow[]>({
+    queryKey: ['/api/categories'],
+  });
+  const categories = useMemo(
+    () => categoriesRows.map(r => r.category),
+    [categoriesRows],
   );
 
-  const filteredTools = useMemo(() => 
-    tools.filter(tool => {
-      const matchesSearch = searchQuery === "" || 
-        tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tool.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      
-      const matchesCategory = selectedCategory === null || tool.category === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
-    }),
-    [tools, searchQuery, selectedCategory]
-  );
+  const { data, isLoading, isError, error } = useQuery<PagedTools>({
+    queryKey: ['tools', page, pageSize, searchQuery, selectedCategory],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(pageSize));
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      if (selectedCategory) params.set("category", selectedCategory);
+      const res = await fetch(`/api/tools?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) {
+        const text = (await res.text()) || res.statusText;
+        throw new Error(text);
+      }
+      const totalHeader = res.headers.get("x-total-count");
+      const items = await res.json();
+      return { items, total: totalHeader ? parseInt(totalHeader, 10) : items.length };
+    },
+    keepPreviousData: true,
+  });
+
+  const total = data?.total ?? 0;
+  const items = data?.items ?? [];
+  const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
+
+  const onSelectCategory = (cat: string | null) => {
+    setSelectedCategory(cat);
+    setPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Navbar searchQuery={searchQuery} onSearchChange={(v) => { setSearchQuery(v); setPage(1); }} />
       <Hero 
         searchQuery={searchQuery} 
         onSearchChange={setSearchQuery}
@@ -52,7 +71,7 @@ export default function Home() {
       <CategoryFilters
         categories={categories}
         selectedCategory={selectedCategory}
-        onCategorySelect={setSelectedCategory}
+        onCategorySelect={onSelectCategory}
       />
       <main className="container mx-auto px-4 py-12 lg:px-8">
         {isLoading ? (
@@ -63,7 +82,22 @@ export default function Home() {
             <a className="underline" href="/api/health" target="_blank" rel="noreferrer">Check API health</a>
           </div>
         ) : (
-          <ToolGrid tools={filteredTools} />
+          <>
+            <ToolGrid tools={items} />
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Page {page} of {totalPages} {total ? `(Total ${total})` : ""}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  Previous
+                </Button>
+                <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </main>
     </div>

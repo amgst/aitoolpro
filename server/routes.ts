@@ -68,16 +68,25 @@ export function setupRoutes(app: Express): void {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
         }
-        const { search, category } = req.query as {
+        const { search, category, page: pageParam, limit: limitParam } = req.query as {
           search?: string;
           category?: string;
+          page?: string;
+          limit?: string;
         };
+
+        const page = Math.max(1, Number.isFinite(Number(pageParam)) ? parseInt(pageParam as string, 10) : 1);
+        const limitRaw = Number.isFinite(Number(limitParam)) ? parseInt(limitParam as string, 10) : 24;
+        const limit = Math.max(1, Math.min(100, limitRaw));
+        const offset = (page - 1) * limit;
 
         const hasSearch = typeof search === "string" && search.trim().length > 0;
         const hasCategory = typeof category === "string" && category.trim().length > 0;
 
         let tools;
+        let totalRows;
         if (!hasSearch && !hasCategory) {
+          totalRows = await sql`SELECT COUNT(*)::int AS count FROM tools;`;
           tools = await sql`
             SELECT
               id,
@@ -93,10 +102,18 @@ export function setupRoutes(app: Express): void {
               rating,
               developer
             FROM tools
-            ORDER BY name ASC;
+            ORDER BY name ASC
+            LIMIT ${limit} OFFSET ${offset};
           `;
         } else if (hasSearch && !hasCategory) {
           const pattern = "%" + search!.trim() + "%";
+          totalRows = await sql`
+            SELECT COUNT(*)::int AS count
+            FROM tools
+            WHERE (name ILIKE ${pattern}
+              OR description ILIKE ${pattern}
+              OR short_description ILIKE ${pattern});
+          `;
           tools = await sql`
             SELECT
               id,
@@ -115,9 +132,15 @@ export function setupRoutes(app: Express): void {
             WHERE (name ILIKE ${pattern}
               OR description ILIKE ${pattern}
               OR short_description ILIKE ${pattern})
-            ORDER BY name ASC;
+            ORDER BY name ASC
+            LIMIT ${limit} OFFSET ${offset};
           `;
         } else if (!hasSearch && hasCategory) {
+          totalRows = await sql`
+            SELECT COUNT(*)::int AS count
+            FROM tools
+            WHERE category = ${category};
+          `;
           tools = await sql`
             SELECT
               id,
@@ -134,10 +157,19 @@ export function setupRoutes(app: Express): void {
               developer
             FROM tools
             WHERE category = ${category}
-            ORDER BY name ASC;
+            ORDER BY name ASC
+            LIMIT ${limit} OFFSET ${offset};
           `;
         } else {
           const pattern = "%" + search!.trim() + "%";
+          totalRows = await sql`
+            SELECT COUNT(*)::int AS count
+            FROM tools
+            WHERE (name ILIKE ${pattern}
+              OR description ILIKE ${pattern}
+              OR short_description ILIKE ${pattern})
+              AND category = ${category};
+          `;
           tools = await sql`
             SELECT
               id,
@@ -157,10 +189,16 @@ export function setupRoutes(app: Express): void {
               OR description ILIKE ${pattern}
               OR short_description ILIKE ${pattern})
               AND category = ${category}
-            ORDER BY name ASC;
+            ORDER BY name ASC
+            LIMIT ${limit} OFFSET ${offset};
           `;
         }
 
+        const total =
+          Array.isArray(totalRows) && totalRows.length > 0 && "count" in totalRows[0]
+            ? Number((totalRows as any)[0].count)
+            : (tools as any[]).length;
+        res.setHeader("X-Total-Count", String(total));
         res.json(tools);
       } catch (err: any) {
         console.error("[/api/tools] error:", err);
