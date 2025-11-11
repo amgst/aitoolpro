@@ -29,8 +29,12 @@ export default async function handler(
       
       const [tool] = await sql`
         UPDATE tools
-        SET name = ${name}, description = ${description}, url = ${url}, 
-            category = ${category}, tags = ${tags || []}
+        SET name = ${name}, 
+            description = ${description}, 
+            url = ${url}, 
+            category = ${category}, 
+            tags = ${tags || []},
+            updated_at = NOW()
         WHERE id = ${id as string}
         RETURNING *
       `;
