@@ -281,6 +281,8 @@ export function setupRoutes(app: Express): void {
                OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
                OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
                OR LOWER(TRIM(slug)) = ${normalized}
+               OR slug ILIKE ${normalized + "%"}
+               OR name ILIKE ${normalized.replace(/-/g, " ") + "%"}
             LIMIT 1;
           `;
         }
