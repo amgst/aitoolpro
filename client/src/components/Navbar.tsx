@@ -34,6 +34,11 @@ export default function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
                 data-testid="input-search"
               />
             </div>
+            <Link href="/categories" data-testid="link-categories">
+              <Button variant="ghost" size="default">
+                Categories
+              </Button>
+            </Link>
             <Link href="/admin" data-testid="link-admin">
               <Button variant="outline" size="default" data-testid="button-admin">
                 Admin

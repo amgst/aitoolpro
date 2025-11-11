@@ -5,6 +5,7 @@ import Hero from "@/components/Hero";
 import CategoryFilters from "@/components/CategoryFilters";
 import ToolGrid from "@/components/ToolGrid";
 import type { Tool } from "@shared/schema";
+import { useEffect } from "react";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,6 +14,13 @@ export default function Home() {
   const { data: tools = [], isLoading, isError, error } = useQuery<Tool[]>({
     queryKey: ['/api/tools'],
   });
+
+  // Initialize selected category from query param for deep links like /?category=Design
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cat = params.get("category");
+    if (cat) setSelectedCategory(cat);
+  }, []);
 
   const categories = useMemo(() => 
     Array.from(new Set(tools.map(tool => tool.category))),

@@ -9,12 +9,15 @@ import Admin from "@/pages/Admin";
 import AdminNew from "@/pages/AdminNew";
 import AdminImport from "@/pages/AdminImport";
 import NotFound from "@/pages/not-found";
+import Categories from "@/pages/Categories";
+import Footer from "@/components/Footer";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/tool/:slug" component={ToolDetail} />
+      <Route path="/categories" component={Categories} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/new" component={AdminNew} />
       <Route path="/admin/import" component={AdminImport} />
@@ -29,6 +32,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <Footer />
       </TooltipProvider>
     </QueryClientProvider>
   );

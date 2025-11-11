@@ -42,6 +42,25 @@ export function setupRoutes(app: Express): void {
       }
     });
 
+  // Get distinct categories with counts
+  for (const base of bases)
+    app.get(`${base}/categories`, async (_req, res) => {
+      try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
+        const rows = await sql`
+          SELECT category, COUNT(*)::int AS count
+          FROM tools
+          GROUP BY category
+          ORDER BY category ASC;
+        `;
+        res.json(rows);
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+
   // Get all tools (optional search/category filters)
   for (const base of bases)
     app.get(`${base}/tools`, async (req, res) => {
