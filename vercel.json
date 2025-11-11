@@ -6,7 +6,6 @@
     { "source": "/health", "destination": "/api/health" },
     { "source": "/tools", "destination": "/api/tools" },
     { "source": "/tools/(.*)", "destination": "/api/tools/$1" },
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
-
