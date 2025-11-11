@@ -49,47 +49,54 @@ export function setupRoutes(app: Express): void {
         if (!sql) {
           return res.status(500).json({ error: "DATABASE_URL is missing" });
         }
-        const { search, category } = req.query;
+        const { search, category } = req.query as {
+          search?: string;
+          category?: string;
+        };
 
-        const conditions: any[] = [];
-        if (search && typeof search === "string") {
-          const pattern = "%" + search + "%";
-          conditions.push(
-            sql`(name ILIKE ${pattern} OR description ILIKE ${pattern} OR "shortDescription" ILIKE ${pattern})`,
-          );
-        }
-        if (category && typeof category === "string") {
-          conditions.push(sql`category = ${category}`);
-        }
+        const hasSearch = typeof search === "string" && search.trim().length > 0;
+        const hasCategory = typeof category === "string" && category.trim().length > 0;
 
-        const whereClause =
-          conditions.length === 0
-            ? sql``
-            : conditions.reduce(
-                (acc, curr, idx) =>
-                  idx === 0 ? sql`WHERE ${curr}` : sql`${acc} AND ${curr}`,
-                sql``,
-              );
-
-        const tools =
-          await sql`
-            SELECT
-              id,
-              slug,
-              name,
-              "shortDescription",
-              category,
-              pricing,
-              "websiteUrl",
-              "logoUrl",
-              features,
-              badge,
-              rating,
-              developer
+        let tools;
+        if (!hasSearch && !hasCategory) {
+          tools = await sql`
+            SELECT id, slug, name, "shortDescription", category, pricing,
+                   "websiteUrl", "logoUrl", features, badge, rating, developer
             FROM tools
-            ${whereClause}
             ORDER BY name ASC;
           `;
+        } else if (hasSearch && !hasCategory) {
+          const pattern = "%" + search!.trim() + "%";
+          tools = await sql`
+            SELECT id, slug, name, "shortDescription", category, pricing,
+                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            FROM tools
+            WHERE (name ILIKE ${pattern}
+              OR description ILIKE ${pattern}
+              OR "shortDescription" ILIKE ${pattern})
+            ORDER BY name ASC;
+          `;
+        } else if (!hasSearch && hasCategory) {
+          tools = await sql`
+            SELECT id, slug, name, "shortDescription", category, pricing,
+                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            FROM tools
+            WHERE category = ${category}
+            ORDER BY name ASC;
+          `;
+        } else {
+          const pattern = "%" + search!.trim() + "%";
+          tools = await sql`
+            SELECT id, slug, name, "shortDescription", category, pricing,
+                   "websiteUrl", "logoUrl", features, badge, rating, developer
+            FROM tools
+            WHERE (name ILIKE ${pattern}
+              OR description ILIKE ${pattern}
+              OR "shortDescription" ILIKE ${pattern})
+              AND category = ${category}
+            ORDER BY name ASC;
+          `;
+        }
 
         res.json(tools);
       } catch (err: any) {
