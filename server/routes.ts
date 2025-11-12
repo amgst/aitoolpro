@@ -13,6 +13,7 @@ import {
   requireAdminApi,
   setAdminSession,
 } from "./auth.js";
+import { isPasswordRequired, isPasswordValid } from "../shared/adminAuth.js";
 
 // ✅ Initialize Neon connection once
 const databaseUrl = process.env.DATABASE_URL;
@@ -474,22 +475,23 @@ export function setupRoutes(app: Express): void {
   for (const base of bases)
     app.post(`${base}/admin/login`, (req, res) => {
       const password = (req.body?.password ?? "") as string;
-      if (!process.env.ADMIN_PASSWORD) {
-        return res
-          .status(500)
-          .json({ error: "Admin password is not configured" });
+      const passwordRequired = isPasswordRequired();
+
+      if (!passwordRequired) {
+        setAdminSession(res);
+        return res.json({ authenticated: true, passwordRequired });
       }
 
       if (!password) {
         return res.status(400).json({ error: "Password is required" });
       }
 
-      if (password !== process.env.ADMIN_PASSWORD) {
+      if (!isPasswordValid(password)) {
         return res.status(401).json({ error: "Invalid password" });
       }
 
       setAdminSession(res);
-      return res.json({ authenticated: true });
+      return res.json({ authenticated: true, passwordRequired });
     });
 
   for (const base of bases)
@@ -500,15 +502,16 @@ export function setupRoutes(app: Express): void {
 
   for (const base of bases)
     app.get(`${base}/admin/session`, (req, res) => {
-      if (!process.env.ADMIN_PASSWORD) {
-        return res.status(200).json({ authenticated: true });
+      const passwordRequired = isPasswordRequired();
+      if (!passwordRequired) {
+        return res.status(200).json({ authenticated: true, passwordRequired });
       }
 
       if (isAdminAuthenticated(req)) {
-        return res.json({ authenticated: true });
+        return res.json({ authenticated: true, passwordRequired });
       }
 
-      res.status(401).json({ authenticated: false });
+      res.status(401).json({ authenticated: false, passwordRequired });
     });
 }
 

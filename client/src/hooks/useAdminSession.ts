@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 
 type AdminSessionResponse = {
   authenticated: boolean;
+  passwordRequired?: boolean;
 };
 
 export function useAdminSession({
@@ -21,6 +22,7 @@ export function useAdminSession({
     });
 
   const authenticated = data?.authenticated ?? false;
+  const passwordRequired = data?.passwordRequired ?? false;
 
   useEffect(() => {
     if (!redirectToLogin) return;
@@ -31,6 +33,7 @@ export function useAdminSession({
 
   return {
     authenticated,
+    passwordRequired,
     isChecking: isLoading || isFetching,
     refetch,
     isError,

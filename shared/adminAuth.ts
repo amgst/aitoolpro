@@ -12,10 +12,15 @@ function getSessionSecret(): string {
 }
 
 export function getAdminPassword(): string {
-  return process.env.ADMIN_PASSWORD ?? "admin";
+  return (process.env.ADMIN_PASSWORD ?? "").trim();
+}
+
+export function isPasswordRequired(): boolean {
+  return getAdminPassword().length > 0;
 }
 
 export function isPasswordValid(password: string | undefined): boolean {
+  if (!isPasswordRequired()) return true;
   if (!password) return false;
   return password === getAdminPassword();
 }

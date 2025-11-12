@@ -3,7 +3,7 @@ import {
   ADMIN_COOKIE_NAME,
   ADMIN_SESSION_TTL_MS,
   createSessionToken,
-  getAdminPassword,
+  isPasswordRequired,
   parseCookies,
   verifySessionToken,
 } from "../shared/adminAuth.js";
@@ -14,7 +14,7 @@ function getSessionToken(req: Request): string | undefined {
 }
 
 export function isAdminConfigured(): boolean {
-  return Boolean(getAdminPassword());
+  return isPasswordRequired();
 }
 
 export function isAdminAuthenticated(req: Request): boolean {
@@ -48,7 +48,7 @@ export function requireAdminApi(
   next: NextFunction,
 ): void {
   if (!isAdminConfigured()) {
-    res.status(500).json({ error: "Admin password is not configured" });
+    next();
     return;
   }
 

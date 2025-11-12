@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   ADMIN_SESSION_TTL_MS,
   createSessionToken,
+  isPasswordRequired,
   isPasswordValid,
   serializeAdminSessionCookie,
 } from "../../shared/adminAuth.js";
@@ -34,13 +35,16 @@ export default async function handler(
   }
 
   const password = (req.body?.password ?? "") as string;
+  const passwordRequired = isPasswordRequired();
 
-  if (!password) {
-    return res.status(400).json({ error: "Password is required" });
-  }
+  if (passwordRequired) {
+    if (!password) {
+      return res.status(400).json({ error: "Password is required" });
+    }
 
-  if (!isPasswordValid(password)) {
-    return res.status(401).json({ error: "Invalid password" });
+    if (!isPasswordValid(password)) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
   }
 
   const token = createSessionToken();
@@ -50,6 +54,7 @@ export default async function handler(
   return res.status(200).json({
     authenticated: true,
     expiresIn: ADMIN_SESSION_TTL_MS,
+    passwordRequired,
   });
 }
 
