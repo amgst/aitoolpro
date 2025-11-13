@@ -13,7 +13,9 @@ import AdminLogin from "@/pages/AdminLogin";
 import AdminEdit from "@/pages/AdminEdit";
 import NotFound from "@/pages/not-found";
 import Categories from "@/pages/Categories";
-import Footer from "@/components/Footer";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
+import About from "@/pages/About";
 
 function Router() {
   return (
@@ -21,6 +23,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/tool/:slug" component={ToolDetail} />
       <Route path="/categories" component={Categories} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/about" component={About} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/new" component={AdminNew} />
@@ -38,7 +43,6 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
-        <Footer />
       </TooltipProvider>
     </QueryClientProvider>
   );

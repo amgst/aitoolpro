@@ -81,6 +81,152 @@ export function setupRoutes(app: Express): void {
       }
     });
 
+  // Sitemap.xml
+  for (const base of bases)
+    app.get(`${base}/sitemap.xml`, async (_req, res) => {
+      try {
+        if (!sql) {
+          return res.status(500).send("<!-- Database not configured -->");
+        }
+        const baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : process.env.SITE_URL || "https://your-domain.com";
+        
+        const tools = await sql`SELECT slug FROM tools ORDER BY created_at DESC LIMIT 10000;`;
+        const categories = await sql`SELECT DISTINCT category FROM tools;`;
+        
+        const urls = [
+          { loc: baseUrl, changefreq: "daily", priority: "1.0" },
+          { loc: `${baseUrl}/categories`, changefreq: "weekly", priority: "0.8" },
+          { loc: `${baseUrl}/about`, changefreq: "monthly", priority: "0.7" },
+          { loc: `${baseUrl}/privacy`, changefreq: "yearly", priority: "0.5" },
+          { loc: `${baseUrl}/terms`, changefreq: "yearly", priority: "0.5" },
+        ];
+
+        categories.forEach((cat: { category: string }) => {
+          urls.push({
+            loc: `${baseUrl}/?category=${encodeURIComponent(cat.category)}`,
+            changefreq: "weekly",
+            priority: "0.8",
+          });
+        });
+
+        tools.forEach((tool: { slug: string }) => {
+          urls.push({
+            loc: `${baseUrl}/tool/${tool.slug}`,
+            changefreq: "weekly",
+            priority: "0.7",
+          });
+        });
+
+        const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(url => `  <url>
+    <loc>${url.loc}</loc>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+
+        res.setHeader("Content-Type", "application/xml");
+        res.send(sitemap);
+      } catch (err: any) {
+        res.status(500).send(`<!-- Error: ${err.message} -->`);
+      }
+    });
+
+  // Get a single tool by slug (MUST come before /tools route to avoid route conflicts)
+  for (const base of bases)
+    app.get(`${base}/tools/:slug`, async (req, res) => {
+      try {
+        if (!sql) {
+          return res.status(500).json({ error: "DATABASE_URL is missing" });
+        }
+        const slug = req.params.slug.trim();
+        const normalized = slug.toLowerCase();
+        const sanitized = normalized.replace(/[^a-z0-9]+/g, "");
+        let rows = await sql`
+          SELECT
+            id,
+            slug,
+            name,
+            description,
+            short_description AS "shortDescription",
+            category,
+            pricing,
+            website_url AS "websiteUrl",
+            logo_url AS "logoUrl",
+            features,
+            tags,
+            badge,
+            rating,
+            source_detail_url AS "sourceDetailUrl",
+            developer,
+            documentation_url AS "documentationUrl",
+            social_links AS "socialLinks",
+            use_cases AS "useCases",
+            screenshots,
+            pricing_details AS "pricingDetails",
+            launch_date AS "launchDate",
+            last_updated AS "lastUpdated"
+          FROM tools
+          WHERE LOWER(TRIM(slug)) = ${normalized}
+             OR slug = ${slug}
+             OR LOWER(slug) = ${normalized}
+             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
+             OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
+             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
+          LIMIT 1;
+        `;
+
+        // Fallback: try computed slug variant if not found yet
+        if (rows.length === 0) {
+          rows = await sql`
+            SELECT
+              id,
+              slug,
+              name,
+              description,
+              short_description AS "shortDescription",
+              category,
+              pricing,
+              website_url AS "websiteUrl",
+              logo_url AS "logoUrl",
+              features,
+              tags,
+              badge,
+              rating,
+              source_detail_url AS "sourceDetailUrl",
+              developer,
+              documentation_url AS "documentationUrl",
+              social_links AS "socialLinks",
+              use_cases AS "useCases",
+              screenshots,
+              pricing_details AS "pricingDetails",
+              launch_date AS "launchDate",
+              last_updated AS "lastUpdated"
+            FROM tools
+            WHERE REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
+               OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
+               OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
+               OR LOWER(TRIM(slug)) = ${normalized}
+               OR slug ILIKE ${normalized + "%"}
+               OR name ILIKE ${normalized.replace(/-/g, " ") + "%"}
+            LIMIT 1;
+          `;
+        }
+
+        if (rows.length === 0) {
+          return res.status(404).json({ error: "Tool not found" });
+        }
+
+        res.json(rows[0]);
+      } catch (err: any) {
+        console.error("[/api/tools/:slug] error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    });
+
   // Get all tools (optional search/category filters)
   for (const base of bases)
     app.get(`${base}/tools`, async (req, res) => {
@@ -222,97 +368,6 @@ export function setupRoutes(app: Express): void {
         res.json(tools);
       } catch (err: any) {
         console.error("[/api/tools] error:", err);
-        res.status(500).json({ error: err.message });
-      }
-    });
-
-  // Get a single tool by slug
-  for (const base of bases)
-    app.get(`${base}/tools/:slug`, async (req, res) => {
-      try {
-        if (!sql) {
-          return res.status(500).json({ error: "DATABASE_URL is missing" });
-        }
-        const slug = req.params.slug.trim();
-        const normalized = slug.toLowerCase();
-        const sanitized = normalized.replace(/[^a-z0-9]+/g, "");
-        let rows = await sql`
-          SELECT
-            id,
-            slug,
-            name,
-            description,
-            short_description AS "shortDescription",
-            category,
-            pricing,
-            website_url AS "websiteUrl",
-            logo_url AS "logoUrl",
-            features,
-            tags,
-            badge,
-            rating,
-            source_detail_url AS "sourceDetailUrl",
-            developer,
-            documentation_url AS "documentationUrl",
-            social_links AS "socialLinks",
-            use_cases AS "useCases",
-            screenshots,
-            pricing_details AS "pricingDetails",
-            launch_date AS "launchDate",
-            last_updated AS "lastUpdated"
-          FROM tools
-          WHERE LOWER(TRIM(slug)) = ${normalized}
-             OR slug = ${slug}
-             OR LOWER(slug) = ${normalized}
-             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
-             OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
-             OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
-          LIMIT 1;
-        `;
-
-        // Fallback: try computed slug variant if not found yet
-        if (rows.length === 0) {
-          rows = await sql`
-            SELECT
-              id,
-              slug,
-              name,
-              description,
-              short_description AS "shortDescription",
-              category,
-              pricing,
-              website_url AS "websiteUrl",
-              logo_url AS "logoUrl",
-              features,
-              tags,
-              badge,
-              rating,
-              source_detail_url AS "sourceDetailUrl",
-              developer,
-              documentation_url AS "documentationUrl",
-              social_links AS "socialLinks",
-              use_cases AS "useCases",
-              screenshots,
-              pricing_details AS "pricingDetails",
-              launch_date AS "launchDate",
-              last_updated AS "lastUpdated"
-            FROM tools
-            WHERE REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '-', 'g') = ${normalized}
-               OR REGEXP_REPLACE(LOWER(name), '[^a-z0-9]+', '', 'g') = ${sanitized}
-               OR REGEXP_REPLACE(LOWER(slug), '[^a-z0-9]+', '', 'g') = ${sanitized}
-               OR LOWER(TRIM(slug)) = ${normalized}
-               OR slug ILIKE ${normalized + "%"}
-               OR name ILIKE ${normalized.replace(/-/g, " ") + "%"}
-            LIMIT 1;
-          `;
-        }
-
-        if (rows.length === 0) {
-          return res.status(404).json({ error: "Tool not found" });
-        }
-
-        res.json(rows[0]);
-      } catch (err: any) {
         res.status(500).json({ error: err.message });
       }
     });

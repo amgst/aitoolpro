@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useSEO } from "@/hooks/useSEO";
 
 type CategoryRow = {
 	category: string;
@@ -13,6 +14,12 @@ export default function Categories() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const { data = [], isLoading, isError, error } = useQuery<CategoryRow[]>({
 		queryKey: ["/api/categories"],
+	});
+
+	useSEO({
+		title: "AI Tools Categories - Browse by Category",
+		description: "Browse AI tools by category. Find the perfect AI solution for content creation, design, development, marketing, and more.",
+		url: typeof window !== "undefined" ? window.location.href : "",
 	});
 
 	let content = null;

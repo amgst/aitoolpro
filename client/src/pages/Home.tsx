@@ -7,6 +7,7 @@ import ToolGrid from "@/components/ToolGrid";
 import Footer from "@/components/Footer";
 import type { Tool } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,6 +61,31 @@ export default function Home() {
     setSelectedCategory(cat);
     setPage(1);
   };
+
+  useSEO({
+    title: selectedCategory 
+      ? `${selectedCategory} AI Tools - AI Tools Directory`
+      : "AI Tools Directory - Discover the Best AI Tools",
+    description: selectedCategory
+      ? `Discover the best ${selectedCategory} AI tools. Browse our curated collection of ${selectedCategory.toLowerCase()} tools for your business.`
+      : "Discover and explore the best AI tools for your business. Browse our curated directory of AI-powered software, from content generation to data analysis.",
+    url: typeof window !== "undefined" ? window.location.href : "",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "AI Tools Directory",
+      "description": "Discover the best AI tools for your business",
+      "url": typeof window !== "undefined" ? window.location.origin : "",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": typeof window !== "undefined" ? `${window.location.origin}/?search={search_term_string}` : ""
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

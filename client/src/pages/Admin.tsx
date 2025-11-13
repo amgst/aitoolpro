@@ -169,6 +169,7 @@ export default function Admin() {
                             variant="outline"
                             onClick={() => setLocation(`/admin/edit/${tool.id}`)}
                             data-testid={`button-edit-${tool.slug}`}
+                            aria-label={`Edit ${tool.name}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -178,6 +179,7 @@ export default function Admin() {
                             onClick={() => handleDelete(tool.id, tool.name)}
                             disabled={deleteMutation.isPending}
                             data-testid={`button-delete-${tool.slug}`}
+                            aria-label={`Delete ${tool.name}`}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
