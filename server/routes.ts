@@ -14,6 +14,7 @@ import {
   setAdminSession,
 } from "./auth.js";
 import { isPasswordRequired, isPasswordValid } from "../shared/adminAuth.js";
+import Papa from "papaparse";
 
 // ✅ Initialize Neon connection once
 const databaseUrl = process.env.DATABASE_URL;
@@ -478,16 +479,23 @@ ${urls.map(url => `  <url>
           return res.status(400).json({ error: "No CSV data provided" });
         }
 
-        const lines = csvData.trim().split("\n");
-        const headers = lines[0].split(",").map((h) => h.trim());
         const imported: any[] = [];
         const errors: any[] = [];
+        const parseResult = Papa.parse(csvData, {
+          header: true,
+          skipEmptyLines: true,
+        });
 
-        for (let i = 1; i < lines.length; i++) {
+        if (parseResult.errors.length > 0) {
+          return res.status(400).json({
+            error: "CSV parsing error",
+            details: parseResult.errors,
+          });
+        }
+
+        for (const row of parseResult.data) {
           try {
-            const values = lines[i].split(",").map((v) => v.trim());
-            const obj: any = {};
-            headers.forEach((h, idx) => (obj[h] = values[idx]));
+            const obj: any = { ...row };
             obj.features = obj.features
               ? obj.features.split("|").map((v: string) => v.trim())
               : [];
@@ -495,7 +503,6 @@ ${urls.map(url => `  <url>
               ? obj.tags.split("|").map((v: string) => v.trim())
               : [];
             obj.rating = obj.rating ? parseFloat(obj.rating) : null;
-
             const data = insertToolSchema.parse({
               ...obj,
               lastUpdated: new Date().toISOString().split("T")[0],
@@ -518,7 +525,7 @@ ${urls.map(url => `  <url>
 
             imported.push(data.slug);
           } catch (err: any) {
-            errors.push({ line: i + 1, error: err.message });
+            errors.push({ line: parseResult.data.indexOf(row) + 2, error: err.message });
           }
         }
 
